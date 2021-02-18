@@ -12,7 +12,7 @@ public class Controller {
 			return;
 		}
 		
-		db.findIndividualTracker(database);
+		db.findTrackers(database);
 		
 	}
 	

@@ -7,6 +7,9 @@ public class Parser {
 
 	public void getParameters(String target)
 	{
+		String version="1.1";
+		System.out.println("dbtrack "+version);
+		
 
 		String username = "";
 		String password="";

@@ -12,7 +12,7 @@ public class Engine {
 
 	Connection connection;	
 	
-	public void findIndividualTracker(String database) 
+	public void findTrackers(String database) 
 	{
 		
         String[] types={"TABLE"};
@@ -41,17 +41,6 @@ public class Engine {
             	
             	}
 
-            	/*
-            	Long n=Long.parseLong(tableRows);            	
-            	if((k<=n/2) && !(k>n/4))
-        		{
-        			//System.out.println("Target "+tableName+" [#"+tableRows+"]");
-        		}
-        		else
-        		{
-        			//System.out.println("Rejected "+tableName+" [#"+tableRows+"]");
-        		}
-            	*/
             	
             }
             
@@ -70,27 +59,83 @@ public class Engine {
          	String columnName=ds.getString("COLUMN_NAME");
          	String columnType=ds.getString("TYPE_NAME");
          	//System.out.println("\t"+columnName+" ["+columnType+"]");
-         	if((columnType.equals("VARCHAR")) && (!this.isNull(tableName, columnName)))
+         	
+         	//search for categorical fields
+         	if(((columnType.equals("VARCHAR"))||(columnType.equals("CHAR"))) && (!this.isNull(tableName, columnName)) && (this.ratioDistinct(tableName, columnName,tableRows)))
          	{
-         			boolean t=this.ratioDistinct(tableName, columnName,tableRows);
-         			if(t==true)
          				al.add(columnName);
          				
          	}         	
 		}
 		
-		//find individual tracker
-		this.getUniqueRecord(tableName,al);
+	
+		this.getIndividualTracker(tableName,al, tableRows);
+		this.getGeneralTracker(tableName, al, tableRows);
 		al.clear();		
 		
 	}
 	
-	private void getUniqueRecord(String tableName,ArrayList al) throws SQLException
+	
+	private void getGeneralTracker(String tableName,ArrayList al, String tableRows) throws SQLException
+	{
+		int n=al.size();
+		if((n==0) || (n==1)) return;
+
+		Long rows=Long.parseLong(tableRows);
+	    long k=2;
+	    
+	    if(k>rows/4) return;
+
+		int i;	
+		for(i=0;i<n;i++)
+		{
+			String columnName=(String) al.get(i);
+			String query="SELECT "+columnName+",COUNT(*) as n from "+tableName+" GROUP BY "+columnName;
+			//System.out.println(query);
+		    Statement statement=connection.createStatement();
+		    ResultSet rs = statement.executeQuery(query);
+		    
+		    
+		    while(rs.next())
+		    {
+				String num=rs.getString("n");
+				String fieldValue=rs.getString(columnName);
+				
+				Long m=Long.parseLong(num);
+				if(m>=2*k && m<=rows-2*k)
+				{
+					if((k<rows/4) || (k==rows/4 && m==rows/2))
+					{
+						System.out.println("\nGeneral Tracker:\t["+tableName+"]\t"+columnName+"='"+fieldValue+"'");
+						System.out.println("Vulnerability range:\t["+(k)+","+(rows-k)+"]");
+						long ki=(m/2)+1;
+						long ks=rows-ki;
+						if(ki<=ks)
+						{
+							System.out.println("Security range:\t\t["+((m/2)+1)+","+((rows-m/2)-1)+"]");
+						}
+						else
+						{
+							System.out.println("Security range:\t\tnone");	
+						}
+												
+					}
+				}
+
+		    }
+			 
+		}
+		
+		
+	}	
+	
+	private void getIndividualTracker(String tableName,ArrayList al, String tableRows) throws SQLException
 	{
 		int n=al.size();
 		if((n==0) || (n==1)) return;
 		
-		
+		Long rows=Long.parseLong(tableRows);
+
 		int i;
 		String group="";
 		
@@ -135,11 +180,39 @@ public class Engine {
 			//System.out.println(queryT);
 			long x=this.testQuery(queryA);
 			long z=this.testQuery(queryT);
-			if(x-z==1)
+			long k=2;
+			if((x-z==1) && (x>=k) && (z<=rows-k))
 			{
-				System.out.println("Found tracker:\n"+queryT);				
+				//System.out.println("\nIndividual Tracker A:\n"+queryA);
+				System.out.println("\nIndividual Tracker:\t"+queryT);
+				this.getSecurityRange(x,z,k,rows);				
+				
 			}
+			
 	    }
+		
+	}
+	
+	
+	private void getSecurityRange(long x, long z, long k, long rows)
+	{
+		//System.out.println(x+" "+z);
+		System.out.println("Vulnerability range:\t["+k+","+(rows-k)+"]");
+		long min;
+		if(x>z)
+			min=z;
+		else
+			min=x;
+		
+		if((min+1)>rows/2)
+		{
+			System.out.println("Security range:\t\tnone");			
+		}
+		else
+		{
+			System.out.println("Security range:\t\t["+(min+1)+","+(rows-(min+1))+"]");	
+		}
+		
 		
 	}
 	
@@ -168,7 +241,8 @@ public class Engine {
 	    columnN=rs.getString("N");
 	    //System.out.println("\t\t"+columnValue+" ["+columnN+"]");
 	    n=Long.parseLong(columnN);
-	    		
+
+	    //verify if the column determines a table partition
 	    if((n>1) && (rows/n)>=2)
 	    {
 	    	//System.out.println(tableName+"."+columnName+" - distinct:"+n+", rows:"+rows);
