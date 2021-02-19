@@ -71,10 +71,164 @@ public class Engine {
 	
 		this.getIndividualTracker(tableName,al, tableRows);
 		this.getGeneralTracker(tableName, al, tableRows);
+		this.getDoubleTracker(tableName, al, tableRows);
 		al.clear();		
 		
 	}
+
 	
+	
+	private void getDoubleTracker(String tableName,ArrayList al, String tableRows) throws SQLException
+	{
+		int n=al.size();
+		//devono essere almeno 2
+		if((n==0) || (n==1) || (n==2)) return;
+
+		Long rows=Long.parseLong(tableRows);
+	    long k=2;
+	    
+	    if(k>rows/3) return;
+
+	    /////////////////////////////////////////////
+		int i,j;
+		String coli;
+		String colj;
+		String queryi;
+		String queryj;
+		String valuei;
+		String valuej;
+		String queryib;
+		String queryjb;
+		ArrayList<String> ali=new ArrayList();
+		ArrayList<String> alj=new ArrayList();
+		
+		
+		for(i=0;i<n-1;i++)
+		{
+			coli=(String) al.get(i);
+			for(j=i+1;j<n;j++)
+			{
+				//estrai i valori distinti per ogni colonna i j
+				colj=(String) al.get(j);
+				//System.out.println("\ni="+coli+"\tj="+colj);
+				queryi="select distinct "+coli+" from "+tableName;
+				queryj="select distinct "+colj+" from "+tableName;
+				
+			    Statement statementi=connection.createStatement();
+			    Statement statementj=connection.createStatement();
+			    ResultSet rsi = statementi.executeQuery(queryi);
+			    ResultSet rsj = statementj.executeQuery(queryj);
+			    			    
+			    while(rsi.next())
+			    {
+			    	valuei=rsi.getString(coli);
+			    	//System.out.println(coli+"\t"+valuei);
+			    	queryib="select i from (select *,@i:=@i+1 AS i from " +tableName+",(SELECT @i:=0) foo) as T where "+coli+"='"+valuei+"'";
+			    	//System.out.println(queryib);
+				    Statement statementib=connection.createStatement();
+				    ResultSet rsib = statementib.executeQuery(queryib);
+				    ali.clear();
+				    while(rsib.next())
+				    {
+				    	ali.add(rsib.getString("i"));
+				    }
+			    			
+			    	rsj.beforeFirst();
+				    while(rsj.next())
+				    {
+				    	valuej=rsj.getString(colj);
+				    	//System.out.println(colj+"\t"+valuej);
+				    	queryjb="select i from (select *,@i:=@i+1 AS i from " +tableName+",(SELECT @i:=0) foo) as T where "+colj+"='"+valuej+"'";
+				    	//System.out.println(queryib+"\t"+queryjb);
+					    Statement statementjb=connection.createStatement();
+					    ResultSet rsjb = statementjb.executeQuery(queryjb);
+					    alj.clear();
+					    while(rsjb.next())
+					    {
+					    	alj.add(rsjb.getString("i"));
+					    }
+
+				    	//test subset
+					    this.testSubset(ali,alj,k,rows,tableName,coli,valuei,colj,valuej);
+				    }
+
+
+			    }
+
+
+
+			}			
+			
+		}
+
+		
+	}
+	
+	
+	private void testSubset(ArrayList ali, ArrayList alj,long k, long rows,String tableName,String coli, String valuei, String colj, String valuej) throws SQLException
+	{
+		//System.out.println(coli+" "+valuei+" "+colj+" "+valuej);		
+		
+		String T="";
+		String U="";
+		
+		if(ali.containsAll(alj))
+		{
+			//System.out.println("j C i");
+			//System.out.println("j "+alj.toString()+" i "+ali.toString());
+			T=colj+"='"+valuej+"'";
+			U=coli+"='"+valuei+"'";			
+			//System.out.println(T+" "+U);
+			
+		}
+		
+		else if(alj.containsAll(ali))
+		{
+			//System.out.println("i C j");
+			//System.out.println("i "+ali.toString()+" j "+alj.toString());
+			U=colj+"='"+valuej+"'";
+			T=coli+"='"+valuei+"'";			
+			//System.out.println(T+" "+U);
+		
+
+		String queryT="select count(*) as n from "+tableName+" where "+T;
+		String queryU="select count(*) as n from "+tableName+" where "+U;
+		//System.out.println(queryT);
+		//System.out.println(queryU);
+
+		long xT=this.testQuery(queryT);
+		long xU=this.testQuery(queryU);
+			
+		long h;
+		long k2;
+		long h2;
+		h=rows-2*k;
+		k2=2*k;
+		h2=rows-k;
+		
+		if(xT>=k && xT<=h)
+		{
+			if(xU>=k2 && xU<=h2)
+			{
+				long seck=xT+1;
+				long sech=(rows-xT)-1;
+				String secRange="none";
+				if(seck<sech)
+					secRange="["+seck+","+sech+"]";
+				
+				System.out.println("\nDouble Tracker:\t\t["+tableName+"]");
+				System.out.println("T:\t\t\t"+T);
+				System.out.println("U:\t\t\t"+U);
+				System.out.println("Vulnerability range:\t["+(k)+","+(rows-k)+"]");
+				System.out.println("Security range:\t\t"+secRange);
+
+			}
+		}
+		
+		}
+
+
+	}
 	
 	private void getGeneralTracker(String tableName,ArrayList al, String tableRows) throws SQLException
 	{
