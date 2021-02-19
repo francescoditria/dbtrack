@@ -7,7 +7,7 @@ public class Parser {
 
 	public void getParameters(String target)
 	{
-		String version="1.1";
+		String version="1.2";
 		System.out.println("dbtrack "+version);
 		
 
