@@ -214,13 +214,18 @@ public class Engine {
 				long sech=(rows-xT)-1;
 				String secRange="none";
 				if(seck<sech)
+				{
 					secRange="["+seck+","+sech+"]";
+				}
 				
-				System.out.println("\nDouble Tracker:\t\t["+tableName+"]");
-				System.out.println("T:\t\t\t"+T);
-				System.out.println("U:\t\t\t"+U);
-				System.out.println("Vulnerability range:\t["+(k)+","+(rows-k)+"]");
-				System.out.println("Security range:\t\t"+secRange);
+				if(k<rows/3 || (k==rows/3 && xT==rows/3 && xU==(2*rows)/3))
+				{
+					System.out.println("\nDouble Tracker:\t\t["+tableName+"]");
+					System.out.println("T:\t\t\t"+T);
+					System.out.println("U:\t\t\t"+U);
+					System.out.println("Vulnerability range:\t["+(k)+","+(rows-k)+"]");
+					System.out.println("Security range:\t\t"+secRange);
+				}
 
 			}
 		}
