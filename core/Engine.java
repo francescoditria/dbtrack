@@ -7,6 +7,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 
 import com.mysql.jdbc.Connection;
+import com.mysql.jdbc.DatabaseMetaData;
 
 public class Engine {
 
@@ -61,7 +62,7 @@ public class Engine {
          	//System.out.println("\t"+columnName+" ["+columnType+"]");
          	
          	//search for categorical fields
-         	if(((columnType.equals("VARCHAR"))||(columnType.equals("CHAR"))) && (!this.isNull(tableName, columnName)) && (this.ratioDistinct(tableName, columnName,tableRows)))
+         	if(((columnType.equals("VARCHAR"))||(columnType.equals("CHAR"))) && (!this.isPK(tableName, columnName)) && (!this.isNull(tableName, columnName)) && (this.ratioDistinct(tableName, columnName,tableRows)))
          	{
          				al.add(columnName);
          				
@@ -72,17 +73,19 @@ public class Engine {
 		this.getIndividualTracker(tableName,al, tableRows);
 		this.getGeneralTracker(tableName, al, tableRows);
 		this.getDoubleTracker(tableName, al, tableRows);
+	
 		al.clear();		
 		
 	}
 
 	
+
 	
 	private void getDoubleTracker(String tableName,ArrayList al, String tableRows) throws SQLException
 	{
 		int n=al.size();
 		//devono essere almeno 2
-		if((n==0) || (n==1) || (n==2)) return;
+		if(n<2) return;
 
 		Long rows=Long.parseLong(tableRows);
 	    long k=2;
@@ -238,7 +241,7 @@ public class Engine {
 	private void getGeneralTracker(String tableName,ArrayList al, String tableRows) throws SQLException
 	{
 		int n=al.size();
-		if((n==0) || (n==1)) return;
+		if(n<1) return;
 
 		Long rows=Long.parseLong(tableRows);
 	    long k=2;
@@ -426,6 +429,25 @@ public class Engine {
 	    else
 	    	return false;
 		
+	}
+
+	
+	private boolean isPK(String tableName,String columnName) throws SQLException
+	{
+		DatabaseMetaData meta;
+	 	meta = (DatabaseMetaData) connection.getMetaData();
+	 	ResultSet rs=meta.getPrimaryKeys(null, null, tableName);
+	 	while(rs.next())
+	 	{
+	 		String pk= rs.getString(4);
+	 		//System.out.println(pk);
+	 		if(columnName.equals(pk))
+	 		{
+	 			return true;
+	 		}
+	 	}
+
+		return false;
 	}
 
 	
