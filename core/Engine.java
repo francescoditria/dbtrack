@@ -89,6 +89,7 @@ public class Engine {
 
 		Long rows=Long.parseLong(tableRows);
 	    long k=2;
+	    float count=0;
 	    
 	    if(k>rows/3) return;
 
@@ -126,7 +127,7 @@ public class Engine {
 			    {
 			    	valuei=rsi.getString(coli);
 			    	//System.out.println(coli+"\t"+valuei);
-			    	queryib="select i from (select *,@i:=@i+1 AS i from " +tableName+",(SELECT @i:=0) foo) as T where "+coli+"='"+valuei+"'";
+			    	queryib="select i from (select *,@i:=@i+1 AS i from " +tableName+",(SELECT @i:=0) tmp) as T where "+coli+"='"+valuei+"'";
 			    	//System.out.println(queryib);
 				    Statement statementib=connection.createStatement();
 				    ResultSet rsib = statementib.executeQuery(queryib);
@@ -152,7 +153,8 @@ public class Engine {
 					    }
 
 				    	//test subset
-					    this.testSubset(ali,alj,k,rows,tableName,coli,valuei,colj,valuej);
+					    boolean t=this.testSubset(ali,alj,k,rows,tableName,coli,valuei,colj,valuej);
+					    if(t) count++;
 				    }
 
 
@@ -163,12 +165,16 @@ public class Engine {
 			}			
 			
 		}
+		
+	    float percent=count/rows*100;
+		System.out.println("\nDouble Trackers\t"+tableName+"\t"+ Math.round(percent)+"%");
+
 
 		
 	}
 	
 	
-	private void testSubset(ArrayList ali, ArrayList alj,long k, long rows,String tableName,String coli, String valuei, String colj, String valuej) throws SQLException
+	private boolean testSubset(ArrayList ali, ArrayList alj,long k, long rows,String tableName,String coli, String valuei, String colj, String valuej) throws SQLException
 	{
 		//System.out.println(coli+" "+valuei+" "+colj+" "+valuej);		
 		
@@ -183,8 +189,7 @@ public class Engine {
 			U=coli+"='"+valuei+"'";			
 			//System.out.println(T+" "+U);
 			
-		}
-		
+		}		
 		else if(alj.containsAll(ali))
 		{
 			//System.out.println("i C j");
@@ -192,8 +197,11 @@ public class Engine {
 			U=colj+"='"+valuej+"'";
 			T=coli+"='"+valuei+"'";			
 			//System.out.println(T+" "+U);
-		
+		}
+		else
+			return false;
 
+		
 		String queryT="select count(*) as n from "+tableName+" where "+T;
 		String queryU="select count(*) as n from "+tableName+" where "+U;
 		//System.out.println(queryT);
@@ -228,12 +236,14 @@ public class Engine {
 					System.out.println("U:\t\t\t"+U);
 					System.out.println("Vulnerability range:\t["+(k)+","+(rows-k)+"]");
 					System.out.println("Security range:\t\t"+secRange);
+					return true;
 				}
 
 			}
 		}
+		return false;
 		
-		}
+		
 
 
 	}
@@ -244,6 +254,7 @@ public class Engine {
 		if(n<1) return;
 
 		Long rows=Long.parseLong(tableRows);
+		float count = 0;
 	    long k=2;
 	    
 	    if(k>rows/4) return;
@@ -272,6 +283,7 @@ public class Engine {
 						System.out.println("Vulnerability range:\t["+(k)+","+(rows-k)+"]");
 						long ki=(m/2)+1;
 						long ks=rows-ki;
+						count++;
 						if(ki<=ks)
 						{
 							System.out.println("Security range:\t\t["+((m/2)+1)+","+((rows-m/2)-1)+"]");
@@ -288,7 +300,9 @@ public class Engine {
 			 
 		}
 		
-		
+	    float percent=count/rows*100;
+		System.out.println("\nGeneral Trackers\t"+tableName+"\t"+ Math.round(percent)+"%");
+
 	}	
 	
 	private void getIndividualTracker(String tableName,ArrayList al, String tableRows) throws SQLException
@@ -297,7 +311,7 @@ public class Engine {
 		if((n==0) || (n==1)) return;
 		
 		Long rows=Long.parseLong(tableRows);
-
+		float count=0;
 		int i;
 		String group="";
 		
@@ -315,6 +329,7 @@ public class Engine {
 	    
 	    String queryA="";
 	    String queryT="";
+	    String C="";
 	    while(rs.next())
 	    {
 	    	//System.out.println(tableName);
@@ -327,14 +342,17 @@ public class Engine {
 				{
 					queryA="select count(*) as n from "+tableName+" where "+fieldName+"='"+fieldValue+"'";
 					queryT=queryA+" AND !(";
+					C=fieldName+"='"+fieldValue+"' AND ";
 				}
 				if(i>0 && i<n-1)
 				{
 					queryT=queryT+fieldName+"='"+fieldValue+"' AND ";
+					C=C+fieldName+"='"+fieldValue+"' AND ";					
 				}
 				if(i==n-1)
 				{
 					queryT=queryT+fieldName+"='"+fieldValue+"')";
+					C=C+fieldName+"='"+fieldValue+"'";;					
 				}
 				
 			}
@@ -347,11 +365,16 @@ public class Engine {
 			{
 				//System.out.println("\nIndividual Tracker A:\n"+queryA);
 				System.out.println("\nIndividual Tracker:\t"+queryT);
-				this.getSecurityRange(x,z,k,rows);				
+				System.out.println("Characteristic:\t\t["+tableName+"]\t"+C);
+				this.getSecurityRange(x,z,k,rows);
+				count++;
 				
 			}
-			
 	    }
+	    
+	    float percent=count/rows*100;
+		System.out.println("\nIndividual Trackers\t"+tableName+"\t"+ Math.round(percent)+"%");
+
 		
 	}
 	
